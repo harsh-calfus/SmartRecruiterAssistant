@@ -10,9 +10,11 @@ client = InferenceClient(
 
 
 def general_chat(prompt):
-    response = client.text_generation(
-        prompt=prompt,
-        max_new_tokens=300,
+    response = client.chat(
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        max_new_tokens=500,
         temperature=0.7
     )
     return response
@@ -28,9 +30,11 @@ def jd_based_resume_filter(jd_text):
 
     combined = system_prompt + jd_text
 
-    response = client.text_generation(
-        prompt=combined,
-        max_new_tokens=500,
+    response = client.chat(
+        messages=[
+            {"role": "user", "content": combined}
+        ],
+        max_new_tokens=700,
         temperature=0.2
     )
 
