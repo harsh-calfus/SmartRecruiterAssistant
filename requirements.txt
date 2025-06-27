@@ -1,5 +1,5 @@
 streamlit
-cloudinary
+together
 psycopg2-binary
-PyPDF2
-huggingface_hub
+pdfplumber
+cloudinary
