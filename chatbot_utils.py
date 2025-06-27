@@ -36,7 +36,7 @@ def jd_based_resume_filter(jd_text):
         + "\n\nJSON Output:"
     )
 
-    response = client.text_generation(
+    response = client.conversational(
         prompt=system_prompt,
         max_new_tokens=700,
         temperature=0.2,
