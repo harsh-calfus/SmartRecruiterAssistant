@@ -15,7 +15,7 @@ def general_chat(prompt):
         f"User: {prompt}\nAI:"
     )
 
-    response = client.text_generation(
+    response = client.conversational(
         prompt=system_prompt,
         max_new_tokens=500,
         temperature=0.7,
