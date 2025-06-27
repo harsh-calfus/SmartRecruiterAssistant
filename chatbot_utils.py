@@ -2,46 +2,40 @@ from huggingface_hub import InferenceClient
 import streamlit as st
 import json
 
-# Use a free, text-generation–compatible model
-client = InferenceClient(
-    model="google/flan-t5-large",
-    token=st.secrets["HF_TOKEN"]
-)
+# Initialize client without a default model
+client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
-def general_chat(prompt):
-    # flan-t5-large expects a simple prompt string
+# Pick a free text-generation model that supports the free Inferencing API
+TEXT_MODEL = "EleutherAI/gpt-neo-2.7B"
+
+def general_chat(prompt: str) -> str:
     response = client.text_generation(
+        model=TEXT_MODEL,
         prompt=prompt,
         max_new_tokens=200,
-        temperature=0.7
+        temperature=0.7,
     )
-    # response is a plain string
     return response.strip()
 
-def jd_based_resume_filter(jd_text):
-    # Prepend instructions to the JD
+def jd_based_resume_filter(jd_text: str) -> tuple[list[str], int]:
     prompt = (
-        "Extract key skills and minimum years of experience from this job description.\n\n"
-        "Return ONLY a JSON object, e.g.:\n"
-        '{"skills": ["Python", "SQL"], "min_experience_years": 3}\n\n'
-        "Job Description:\n"
-        + jd_text
+        "You are an AI recruiter assistant. Extract key skills and minimum years "
+        "of experience from this job description and return ONLY valid JSON:\n"
+        '{"skills": ["skill1","skill2"], "min_experience_years": number}\n\n'
+        "Job Description:\n" + jd_text + "\n\nJSON:"
     )
 
     response = client.text_generation(
+        model=TEXT_MODEL,
         prompt=prompt,
         max_new_tokens=200,
-        temperature=0.2
+        temperature=0.2,
     )
 
     try:
-        # Find the first JSON object in the response
+        # locate and parse JSON
         json_start = response.find("{")
-        json_str = response[json_start:]
-        filters = json.loads(json_str)
-
-        skills = filters.get("skills", [])
-        min_exp = filters.get("min_experience_years", 0)
-        return skills, min_exp
+        data = json.loads(response[json_start:])
+        return data.get("skills", []), data.get("min_experience_years", 0)
     except Exception:
         return [], 0
