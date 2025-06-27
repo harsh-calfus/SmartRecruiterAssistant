@@ -1,6 +1,5 @@
 streamlit
-openai
 cloudinary
 psycopg2-binary
 PyPDF2
-requests
+huggingface_hub
