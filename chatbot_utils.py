@@ -10,43 +10,43 @@ client = InferenceClient(
 
 
 def general_chat(prompt):
-    system_prompt = (
-        "You are a helpful AI assistant. Answer the following user query conversationally.\n\n"
-        f"User: {prompt}\nAI:"
-    )
-
     response = client.chat_completion(
-        prompt=system_prompt,
-        max_new_tokens=500,
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=500,
         temperature=0.7,
         repetition_penalty=1.2,
     )
 
-    return response.strip()
+    return response.choices[0].message.content.strip()
 
 
 def jd_based_resume_filter(jd_text):
-    system_prompt = (
+    system_message = (
         "You are an AI recruiter assistant. Extract key skills and minimum years "
         "of experience from the following job description.\n\n"
         "Return the output strictly in JSON format like:\n"
-        "{\"skills\": [\"skill1\", \"skill2\"], \"min_experience_years\": number}\n\n"
-        "Job Description:\n"
-        + jd_text
-        + "\n\nJSON Output:"
+        '{"skills": ["skill1", "skill2"], "min_experience_years": number}\n\n'
+        "Job Description:\n" + jd_text + "\n\nJSON Output:"
     )
 
     response = client.chat_completion(
-        prompt=system_prompt,
-        max_new_tokens=700,
+        messages=[
+            {"role": "user", "content": system_message}
+        ],
+        max_tokens=700,
         temperature=0.2,
         repetition_penalty=1.1,
     )
 
     try:
-        # Clean and parse response
-        json_start = response.find("{")
-        json_str = response[json_start:].strip()
+        content = response.choices[0].message.content.strip()
+
+        # Extract JSON part from response
+        json_start = content.find("{")
+        json_str = content[json_start:].strip()
+
         filters = json.loads(json_str)
 
         skills = filters.get("skills", [])
