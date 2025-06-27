@@ -1,6 +1,5 @@
 from huggingface_hub import InferenceClient
 import streamlit as st
-from database import filter_resumes
 
 
 client = InferenceClient(
@@ -10,14 +9,14 @@ client = InferenceClient(
 
 
 def general_chat(prompt):
-    response = client.chat(
+    response = client.chat.completions(
         messages=[
             {"role": "user", "content": prompt}
         ],
-        max_new_tokens=500,
+        max_tokens=500,
         temperature=0.7
     )
-    return response
+    return response.choices[0].message.content
 
 
 def jd_based_resume_filter(jd_text):
@@ -30,21 +29,21 @@ def jd_based_resume_filter(jd_text):
 
     combined = system_prompt + jd_text
 
-    response = client.chat(
+    response = client.chat.completions(
         messages=[
             {"role": "user", "content": combined}
         ],
-        max_new_tokens=700,
+        max_tokens=700,
         temperature=0.2
     )
 
     import json
     try:
-        filters = json.loads(response)
+        filters = json.loads(response.choices[0].message.content)
         skills = filters.get("skills", [])
         min_exp = filters.get("min_experience_years", 0)
 
-        return filter_resumes(skills, min_exp)
+        return skills, min_exp
 
     except Exception:
-        return [{"error": "Failed to parse JD into filters."}]
+        return [], 0
