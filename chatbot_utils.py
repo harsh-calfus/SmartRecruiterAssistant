@@ -1,38 +1,57 @@
-from huggingface_hub import InferenceClient
+from together import Together
 import streamlit as st
 import json
+from database import filter_resumes
 
-# Initialize client without default model
-client = InferenceClient(token=st.secrets["HF_TOKEN"])
-
-# Use flan-t5-base, which supports text_generation on free-tier
-TEXT_MODEL = "google/flan-t5-base"
+# Initialize Together.ai client (reads TOGETHER_API_KEY from secrets or env)
+client = Together()
 
 def general_chat(prompt: str) -> str:
-    response = client.text_generation(
-        model=TEXT_MODEL,
-        prompt=prompt,
-        max_new_tokens=150,
+    """
+    Send a general user prompt to the LLM and return the assistant's reply.
+    """
+    response = client.chat.completions.create(
+        model="deepseek-ai/DeepSeek-V3",
+        messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
+        max_tokens=300
     )
-    return response.strip()
+    return response.choices[0].message.content.strip()
 
 def jd_based_resume_filter(jd_text: str) -> tuple[list[str], int]:
-    prompt = (
-        "Extract key skills and minimum years of experience from this job description "
-        "and return ONLY valid JSON. Example:\n"
-        '{"skills": ["Python", "SQL"], "min_experience_years": 3}\n\n'
-        "Job Description:\n" + jd_text + "\n\nJSON:"
+    """
+    Extract skills & min years from a job description via the LLM,
+    then filter resumes in the database accordingly.
+    """
+    system_msg = (
+        "You are an AI recruiter assistant.  "
+        "Read the following job description and extract:\n"
+        "1) 'skills': a list of required skills\n"
+        "2) 'min_experience_years': minimum years of experience\n\n"
+        "Return ONLY a JSON object, for example:\n"
+        "{\"skills\":[\"Python\",\"SQL\"],\"min_experience_years\":3}\n\n"
+        "Job Description:\n" + jd_text
     )
-    response = client.text_generation(
-        model=TEXT_MODEL,
-        prompt=prompt,
-        max_new_tokens=150,
+
+    # Ask the model to produce the JSON
+    resp = client.chat.completions.create(
+        model="deepseek-ai/DeepSeek-V3",
+        messages=[
+            {"role": "system",  "content": system_msg}
+        ],
         temperature=0.2,
+        max_tokens=200
     )
+
+    content = resp.choices[0].message.content.strip()
     try:
-        json_start = response.find("{")
-        data = json.loads(response[json_start:])
-        return data.get("skills", []), data.get("min_experience_years", 0)
+        # Find the JSON substring and parse
+        start = content.find("{")
+        data = json.loads(content[start:])
+        skills = data.get("skills", [])
+        min_exp = data.get("min_experience_years", 0)
     except Exception:
-        return [], 0
+        skills, min_exp = [], 0
+
+    # Filter resumes in the database by these criteria
+    return filter_resumes(skills, min_exp)
