@@ -1,6 +1,6 @@
 from huggingface_hub import InferenceClient
 import streamlit as st
-from database import filter_resumes
+import json
 
 
 client = InferenceClient(
@@ -10,37 +10,45 @@ client = InferenceClient(
 
 
 def general_chat(prompt):
-    response = client.chat.completions.create(
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=500,
-        temperature=0.7
+    system_prompt = (
+        "You are a helpful AI assistant. Answer the following user query conversationally.\n\n"
+        f"User: {prompt}\nAI:"
     )
-    return response.choices[0].message.content
+
+    response = client.text_generation(
+        prompt=system_prompt,
+        max_new_tokens=500,
+        temperature=0.7,
+        repetition_penalty=1.2,
+    )
+
+    return response.strip()
 
 
 def jd_based_resume_filter(jd_text):
     system_prompt = (
         "You are an AI recruiter assistant. Extract key skills and minimum years "
-        "of experience from this job description. Return a JSON like this:\n\n"
-        "{'skills': ['skill1', 'skill2'], 'min_experience_years': number}\n\n"
+        "of experience from the following job description.\n\n"
+        "Return the output strictly in JSON format like:\n"
+        "{\"skills\": [\"skill1\", \"skill2\"], \"min_experience_years\": number}\n\n"
         "Job Description:\n"
+        + jd_text
+        + "\n\nJSON Output:"
     )
 
-    combined = system_prompt + jd_text
-
-    response = client.chat.completions.create(
-        messages=[
-            {"role": "user", "content": combined}
-        ],
-        max_tokens=700,
-        temperature=0.2
+    response = client.text_generation(
+        prompt=system_prompt,
+        max_new_tokens=700,
+        temperature=0.2,
+        repetition_penalty=1.1,
     )
 
-    import json
     try:
-        filters = json.loads(response.choices[0].message.content)
+        # Clean and parse response
+        json_start = response.find("{")
+        json_str = response[json_start:].strip()
+        filters = json.loads(json_str)
+
         skills = filters.get("skills", [])
         min_exp = filters.get("min_experience_years", 0)
 
