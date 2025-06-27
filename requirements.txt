@@ -1,8 +1,6 @@
 streamlit
+openai
 cloudinary
-sqlalchemy
 psycopg2-binary
-pandas
-pdfplumber
-python-docx
-python-dotenv
+PyPDF2
+requests
