@@ -13,7 +13,7 @@ cloudinary.config(
 )
 
 def _sanitize_public_id(file_name: str) -> str:
-    # Remove file extension, replace invalid chars with underscore
+    # Strip extension, replace invalid chars with underscore
     base = file_name.rsplit(".", 1)[0]
     return re.sub(r'[^0-9A-Za-z_-]', '_', base)
 
@@ -24,7 +24,13 @@ def upload_to_cloudinary(file, file_name: str) -> str:
         public_id=public_id,
         resource_type="raw"
     )
-    return result["secure_url"]
+    # Return the URL forcing .pdf format
+    url, _ = cloudinary.utils.cloudinary_url(
+        public_id,
+        resource_type="raw",
+        format="pdf"
+    )
+    return url
 
 def delete_from_cloudinary(file_name: str):
     public_id = _sanitize_public_id(file_name)
@@ -32,8 +38,11 @@ def delete_from_cloudinary(file_name: str):
 
 def fetch_pdf(file_name: str) -> str | None:
     public_id = _sanitize_public_id(file_name)
+    # Build URL with .pdf
     url, _ = cloudinary.utils.cloudinary_url(
-        public_id, resource_type="raw", type="upload"
+        public_id,
+        resource_type="raw",
+        format="pdf"
     )
     r = requests.get(
         url,
