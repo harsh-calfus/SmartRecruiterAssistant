@@ -3,3 +3,4 @@ together
 psycopg2-binary
 pdfplumber
 cloudinary
+PyPDF2
