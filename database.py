@@ -9,7 +9,7 @@ cur = conn.cursor()
 def create_table():
     cur.execute(
         """
-        CREATE OR REPLACE TABLE resumes (
+        CREATE TABLE IF NOT EXISTS resumes (
             file_name TEXT PRIMARY KEY,
             url TEXT,
             content TEXT
