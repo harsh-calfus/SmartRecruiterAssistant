@@ -1,38 +1,46 @@
+from huggingface_hub import InferenceClient
 import streamlit as st
-from openai import OpenAI
 from database import filter_resumes
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+client = InferenceClient(
+    "mistralai/Mistral-7B-Instruct-v0.2",
+    token=st.secrets["HF_TOKEN"]
+)
+
 
 def general_chat(prompt):
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
+    response = client.text_generation(
+        prompt=prompt,
+        max_new_tokens=300,
+        temperature=0.7
     )
-    return response.choices[0].message.content
+    return response
 
 
 def jd_based_resume_filter(jd_text):
     system_prompt = (
-        "You are an AI recruiter assistant. Extract skills, years of experience, "
-        "technologies, and relevant filters from the following job description. "
-        "Return them as JSON with fields: skills, min_experience_years."
+        "You are an AI recruiter assistant. Extract key skills and minimum years "
+        "of experience from this job description. Return a JSON like this:\n\n"
+        "{'skills': ['skill1', 'skill2'], 'min_experience_years': number}\n\n"
+        "Job Description:\n"
     )
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": jd_text},
-        ],
+    combined = system_prompt + jd_text
+
+    response = client.text_generation(
+        prompt=combined,
+        max_new_tokens=500,
+        temperature=0.2
     )
-    content = response.choices[0].message.content
+
     import json
     try:
-        filters = json.loads(content)
+        filters = json.loads(response)
         skills = filters.get("skills", [])
         min_exp = filters.get("min_experience_years", 0)
 
         return filter_resumes(skills, min_exp)
-    except:
-        return [{"error": "Failed to parse JD into filters"}]
+
+    except Exception:
+        return [{"error": "Failed to parse JD into filters."}]
