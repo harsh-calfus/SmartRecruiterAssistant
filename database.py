@@ -45,10 +45,14 @@ def filter_resumes(skills, min_experience_years):
     if not skills:
         query = "SELECT file_name, url FROM resumes"
     else:
-        query = """
+        conditions = " AND ".join(
+            [f"content ILIKE '%%{skill}%%'" for skill in skills]
+        )
+        query = f"""
             SELECT file_name, url FROM resumes
-            WHERE (
-        """ + " AND ".join([f"content ILIKE '%{skill}%'" for skill in skills]) + ")"
+            WHERE {conditions}
+        """
+
     cur.execute(query)
     rows = cur.fetchall()
     return [{"file_name": row[0], "url": row[1]} for row in rows]
