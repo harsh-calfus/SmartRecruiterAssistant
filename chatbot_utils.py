@@ -2,11 +2,11 @@ from huggingface_hub import InferenceClient
 import streamlit as st
 import json
 
-# Initialize without default model
+# Initialize client without default model
 client = InferenceClient(token=st.secrets["HF_TOKEN"])
 
-# Use distilgpt2 (free text-generation model)
-TEXT_MODEL = "distilgpt2"
+# Use flan-t5-base, which supports text_generation on free-tier
+TEXT_MODEL = "google/flan-t5-base"
 
 def general_chat(prompt: str) -> str:
     response = client.text_generation(
@@ -19,9 +19,9 @@ def general_chat(prompt: str) -> str:
 
 def jd_based_resume_filter(jd_text: str) -> tuple[list[str], int]:
     prompt = (
-        "Extract key skills and minimum years of experience from this job description. "
-        "Return only JSON:\n"
-        '{"skills":["skill1","skill2"],"min_experience_years":number}\n\n'
+        "Extract key skills and minimum years of experience from this job description "
+        "and return ONLY valid JSON. Example:\n"
+        '{"skills": ["Python", "SQL"], "min_experience_years": 3}\n\n'
         "Job Description:\n" + jd_text + "\n\nJSON:"
     )
     response = client.text_generation(
