@@ -1,5 +1,6 @@
 from huggingface_hub import InferenceClient
 import streamlit as st
+from database import filter_resumes
 
 
 client = InferenceClient(
@@ -9,7 +10,7 @@ client = InferenceClient(
 
 
 def general_chat(prompt):
-    response = client.chat.completions(
+    response = client.chat.completions.create(
         messages=[
             {"role": "user", "content": prompt}
         ],
@@ -29,7 +30,7 @@ def jd_based_resume_filter(jd_text):
 
     combined = system_prompt + jd_text
 
-    response = client.chat.completions(
+    response = client.chat.completions.create(
         messages=[
             {"role": "user", "content": combined}
         ],
