@@ -1,4 +1,3 @@
-
 import streamlit as st
 from database import (
     create_table, get_all_resumes, insert_resume, delete_resume
@@ -8,16 +7,22 @@ from chatbot_utils import general_chat, jd_based_resume_filter
 from io import BytesIO
 from PyPDF2 import PdfReader
 
+
+# Initialize DB
 create_table()
 
 st.set_page_config(layout="wide")
 st.title("🧠 Smart Recruiter Assistant")
 
+# Tabs
 tab1, tab2 = st.tabs(["📄 Resume Dashboard", "🤖 Recruiter Chatbot"])
 
+
+# ---------- Resume Dashboard ----------
 with tab1:
     st.subheader("📄 Resume Dashboard")
 
+    # Upload resumes
     uploaded_files = st.file_uploader(
         "Upload Resumes (PDF only)", type=["pdf"], accept_multiple_files=True
     )
@@ -37,6 +42,7 @@ with tab1:
 
         st.success("Upload complete!")
 
+    # Show resume list
     resumes = get_all_resumes()
     st.subheader("Uploaded Resumes")
 
@@ -74,6 +80,8 @@ with tab1:
                     height=1000,
                 )
 
+
+# ---------- Chatbot ----------
 with tab2:
     st.subheader("🤖 Recruiter Chatbot")
 
