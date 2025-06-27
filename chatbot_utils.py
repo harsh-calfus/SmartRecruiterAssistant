@@ -15,7 +15,7 @@ def general_chat(prompt):
         f"User: {prompt}\nAI:"
     )
 
-    response = client.conversational(
+    response = client.chat_completion(
         prompt=system_prompt,
         max_new_tokens=500,
         temperature=0.7,
@@ -36,7 +36,7 @@ def jd_based_resume_filter(jd_text):
         + "\n\nJSON Output:"
     )
 
-    response = client.conversational(
+    response = client.chat_completion(
         prompt=system_prompt,
         max_new_tokens=700,
         temperature=0.2,
