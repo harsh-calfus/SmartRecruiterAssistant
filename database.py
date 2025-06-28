@@ -46,7 +46,7 @@ def insert_resume(file_name, url, content, years_of_experience):
         st.error(f"Error inserting resume: {e}")
 
 
-# ✅ Fetch All Resumes (for listing)
+# ✅ Fetch All Resumes (file name + URL)
 def get_all_resumes():
     try:
         cur.execute("SELECT file_name, url FROM resumes")
@@ -57,7 +57,7 @@ def get_all_resumes():
         return []
 
 
-# ✅ Fetch Resumes with Content (if needed)
+# ✅ Fetch All Resumes with Content
 def get_all_resumes_with_content():
     try:
         cur.execute("SELECT file_name, url, content FROM resumes")
@@ -78,7 +78,7 @@ def delete_resume(file_name):
         st.error(f"Error deleting resume: {e}")
 
 
-# ✅ Filter by Experience (Optional Helper)
+# ✅ Filter by Minimum Experience
 def filter_by_experience(min_experience_years):
     try:
         cur.execute(
@@ -95,15 +95,15 @@ def filter_by_experience(min_experience_years):
         return []
 
 
-# ✅ 🔥 Filter by Skills + Experience (Main Function for Chatbot)
+# ✅ 🔥 Filter by Skills + Experience
 def filter_resumes_by_skills_and_experience(skills, min_experience_years=0):
     try:
         if not skills:
             return []
 
-        # Build dynamic WHERE clause for skills
+        # Dynamic WHERE clause for skills (matches any skill)
         skill_conditions = " OR ".join(
-            [f"content ILIKE %s" for _ in skills]
+            ["content ILIKE %s" for _ in skills]
         )
         params = [f"%{skill}%" for skill in skills] + [min_experience_years]
 

@@ -81,11 +81,10 @@ with tab1:
 with tab2:
     st.subheader("🤖 Recruiter Chatbot")
 
-    # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Add CSS for chat bubble styling
+    # Chat styling
     st.markdown(
         """
         <style>
@@ -114,7 +113,7 @@ with tab2:
 
     chat_container = st.container()
 
-    # Display chat history
+    # Render chat history
     with chat_container:
         for msg in st.session_state.messages:
             role_class = "user-message" if msg["role"] == "user" else "assistant-message"
@@ -123,7 +122,6 @@ with tab2:
                 unsafe_allow_html=True,
             )
 
-    # Chat input
     prompt = st.chat_input("Ask me anything...")
 
     if prompt:
@@ -135,7 +133,7 @@ with tab2:
                 unsafe_allow_html=True,
             )
 
-        # Intent detection
+        # ---- Intent Detection ----
         intent_result = detect_intent(prompt)
         intent = intent_result.get("intent", "general_chat")
         min_exp = intent_result.get("min_years_experience", 0)
@@ -148,18 +146,20 @@ with tab2:
                 if results:
                     response = "### 🔍 **Top Matching Resumes:**\n\n"
                     for res in results:
+                        matched_skills_str = ", ".join(res['matched_skills'])
                         response += (
                             f"- 📄 [**{res['file_name']}**]({res['url']})  \n"
-                            f"&nbsp;&nbsp;&nbsp;• ✅ Skills Matched: **{res['match_count']}**  \n"
-                            f"&nbsp;&nbsp;&nbsp;• 🏆 Years of Experience: **{res['years_of_experience']}**\n\n"
+                            f"&nbsp;&nbsp;&nbsp;• 🏆 **Years of Experience:** {res['years_of_experience']}  \n"
+                            f"&nbsp;&nbsp;&nbsp;• 🔧 **Skills Matched:** {matched_skills_str}\n\n"
                         )
-
                 else:
-                    response = "⚠️ No matching resumes found."
+                    response = "⚠️ No matching resumes found based on the provided skills and experience."
+
             else:
-                response = "❗ Please mention skills for better filtering."
+                response = "❗ Please mention skills or technologies to filter resumes effectively."
 
         else:
+            # ---- General Chat ----
             messages = [
                 {"role": m["role"], "content": m["content"]}
                 for m in st.session_state.messages

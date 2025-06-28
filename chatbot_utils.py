@@ -34,18 +34,22 @@ def search_resumes_sql_first(required_skills, min_years_experience=0):
         if not required_skills:
             return []
 
-        # SQL filter first to reduce load
+        # SQL filter to reduce load
         resumes = filter_resumes_by_skills_and_experience(required_skills, min_years_experience)
 
         if not resumes:
             return []
 
-        # Count skill matches
         results = []
         for file_name, url, content, years_of_experience in resumes:
-            matched_skills = [
-                skill.lower() for skill in required_skills if skill.lower() in content.lower()
-            ]
+            text_lower = content.lower()
+
+            matched_skills = []
+            for skill in required_skills:
+                pattern = r'\b' + re.escape(skill.lower()) + r'\b'
+                if re.search(pattern, text_lower):
+                    matched_skills.append(skill.lower())
+
             match_count = len(matched_skills)
 
             if match_count > 0:
@@ -57,7 +61,7 @@ def search_resumes_sql_first(required_skills, min_years_experience=0):
                     "match_count": match_count
                 })
 
-        # Sort by highest skill match count, then YOE
+        # Sort: Most skills matched → Higher YOE
         results = sorted(results, key=lambda x: (-x['match_count'], -x['years_of_experience']))
 
         return results
