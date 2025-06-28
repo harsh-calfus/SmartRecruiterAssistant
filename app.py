@@ -46,7 +46,7 @@ with tab1:
                 insert_resume(
                     uploaded_file.name,
                     cloud_url,
-                    text + f"\n[Experience: {years_of_experience} years]",
+                    text,
                     years_of_experience
                 )
 
