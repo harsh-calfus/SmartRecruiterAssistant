@@ -58,7 +58,7 @@ with tab1:
                 if st.button("🗑️", key=f"delete_{file_name}"):
                     delete_from_cloudinary(file_name)
                     delete_resume(file_name)
-                    st.experimental_rerun()
+                    st.rerun()
     else:
         st.info("No resumes uploaded yet.")
 
