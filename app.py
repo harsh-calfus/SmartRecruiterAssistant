@@ -146,12 +146,14 @@ with tab2:
                 results = search_resumes_sql_first(required_skills, min_exp)
 
                 if results:
-                    response = "### **🔍 Top matching resumes:**\n"
+                    response = "### 🔍 **Top Matching Resumes:**\n\n"
                     for res in results:
                         response += (
-                            f"- **[{res['file_name']}]({res['url']})** — "
-                            f"{res['match_count']} skill(s) matched, YOE: {res['years_of_experience']}\n"
+                            f"- 📄 [**{res['file_name']}**]({res['url']})  \n"
+                            f"&nbsp;&nbsp;&nbsp;• ✅ Skills Matched: **{res['match_count']}**  \n"
+                            f"&nbsp;&nbsp;&nbsp;• 🏆 Years of Experience: **{res['years_of_experience']}**\n\n"
                         )
+
                 else:
                     response = "⚠️ No matching resumes found."
             else:
