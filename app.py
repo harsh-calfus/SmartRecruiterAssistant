@@ -3,7 +3,9 @@ from database import (
     create_table, get_all_resumes, insert_resume, delete_resume
 )
 from cloudinary_utils import upload_to_cloudinary, delete_from_cloudinary
-from chatbot_utils import chat_with_bot, search_resumes, detect_intent, extract_experience_with_llm
+from chatbot_utils import (
+    chat_with_bot, search_resumes, detect_intent, extract_experience_with_llm
+)
 from io import BytesIO
 from PyPDF2 import PdfReader
 
@@ -74,32 +76,77 @@ with tab1:
 
 
 # ------------------------------------------
-# 🤖 Recruiter Chatbot (Like ChatGPT)
+# 🤖 Recruiter Chatbot (ChatGPT Style UI)
 # ------------------------------------------
 with tab2:
     st.subheader("🤖 Recruiter Chatbot")
 
+    # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display chat history
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+    # Add CSS for styling chat bubbles
+    st.markdown(
+        """
+        <style>
+        .user-message {
+            background-color: #DCF8C6;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            text-align: right;
+        }
+        .assistant-message {
+            background-color: #F1F0F0;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        .message-text {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Fixed chat input
-    if prompt := st.chat_input("Ask me anything..."):
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(prompt)
+    chat_container = st.container()
+
+    # Display chat history with styled bubbles
+    with chat_container:
+        for msg in st.session_state.messages:
+            if msg["role"] == "user":
+                st.markdown(
+                    f'<div class="user-message"><div class="message-text">{msg["content"]}</div></div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f'<div class="assistant-message"><div class="message-text">{msg["content"]}</div></div>',
+                    unsafe_allow_html=True,
+                )
+
+    # Chat input
+    prompt = st.chat_input("Ask me anything...")
+
+    if prompt:
+        # Save user message
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # ---- Intent Detection ----
+        with chat_container:
+            st.markdown(
+                f'<div class="user-message"><div class="message-text">{prompt}</div></div>',
+                unsafe_allow_html=True,
+            )
+
+        # Intent detection
         intent_result = detect_intent(prompt)
         intent = intent_result.get("intent", "general_chat")
         min_exp = intent_result.get("min_years_experience", 0)
 
-        # ---- Handle Resume Search ----
+        # Handle resume search
         if intent == "resume_search":
             results = search_resumes(prompt, min_years_experience=min_exp)
             if results:
@@ -111,7 +158,7 @@ with tab2:
             else:
                 response = "⚠️ No matching resumes found."
 
-        # ---- Handle General Chat ----
+        # Handle general chat
         else:
             messages = [
                 {"role": m["role"], "content": m["content"]}
@@ -119,7 +166,11 @@ with tab2:
             ]
             response = chat_with_bot(messages)
 
-        with st.chat_message("assistant"):
-            st.markdown(response)
-
+        # Save assistant response
         st.session_state.messages.append({"role": "assistant", "content": response})
+
+        with chat_container:
+            st.markdown(
+                f'<div class="assistant-message"><div class="message-text">{response}</div></div>',
+                unsafe_allow_html=True,
+            )
