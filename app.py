@@ -9,7 +9,7 @@ from PyPDF2 import PdfReader
 
 
 # Initialize DB
-create_table()
+# create_table()
 
 st.set_page_config(page_title="Smart Recruiter Assistant", layout="wide")
 st.title("🧠 Smart Recruiter Assistant")
