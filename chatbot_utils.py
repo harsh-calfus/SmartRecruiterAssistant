@@ -1,21 +1,17 @@
 from together import Together
-from sentence_transformers import SentenceTransformer, util
-from database import get_all_resumes_with_content, filter_by_experience
+from database import filter_resumes_by_skills_and_experience
 import streamlit as st
 import json
 import re
 
 
-# Initialize Together.ai client
+# ✅ Initialize LLM client
 client = Together(api_key=st.secrets["TOGETHER_API_KEY"])
 
-# Initialize embedding model
-embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
-
-# --------------------------
+# ------------------------------------------
 # ✅ General Chat
-# --------------------------
+# ------------------------------------------
 def chat_with_bot(messages):
     try:
         response = client.chat.completions.create(
@@ -30,36 +26,40 @@ def chat_with_bot(messages):
         return "⚠️ Error responding. Please try again."
 
 
-# --------------------------
-# ✅ Smart Resume Search (with optional experience filter)
-# --------------------------
-def search_resumes(query, min_years_experience=0, top_k=5):
+# ------------------------------------------
+# ✅ Smart Resume Search (SQL + Skill Matching)
+# ------------------------------------------
+def search_resumes_sql_first(required_skills, min_years_experience=0):
     try:
-        if min_years_experience > 0:
-            resumes = filter_by_experience(min_years_experience)
-        else:
-            resumes = get_all_resumes_with_content()
+        if not required_skills:
+            return []
+
+        # SQL filter first to reduce load
+        resumes = filter_resumes_by_skills_and_experience(required_skills, min_years_experience)
 
         if not resumes:
             return []
 
-        file_names = [r[0] for r in resumes]
-        urls = [r[1] for r in resumes]
-        texts = [r[2] for r in resumes]
-
-        resume_embeddings = embedder.encode(texts, convert_to_tensor=True)
-        query_embedding = embedder.encode(query, convert_to_tensor=True)
-
-        hits = util.cos_sim(query_embedding, resume_embeddings)[0]
-        top_results = hits.topk(k=min(top_k, len(file_names)))
-
+        # Count skill matches
         results = []
-        for score, idx in zip(top_results.values, top_results.indices):
-            results.append({
-                "file_name": file_names[idx],
-                "url": urls[idx],
-                "score": round(float(score), 2)
-            })
+        for file_name, url, content, years_of_experience in resumes:
+            matched_skills = [
+                skill.lower() for skill in required_skills if skill.lower() in content.lower()
+            ]
+            match_count = len(matched_skills)
+
+            if match_count > 0:
+                results.append({
+                    "file_name": file_name,
+                    "url": url,
+                    "years_of_experience": years_of_experience,
+                    "matched_skills": matched_skills,
+                    "match_count": match_count
+                })
+
+        # Sort by highest skill match count, then YOE
+        results = sorted(results, key=lambda x: (-x['match_count'], -x['years_of_experience']))
+
         return results
 
     except Exception as e:
@@ -67,9 +67,9 @@ def search_resumes(query, min_years_experience=0, top_k=5):
         return []
 
 
-# --------------------------
-# ✅ LLM-driven Experience Extraction
-# --------------------------
+# ------------------------------------------
+# ✅ Extract Experience using LLM
+# ------------------------------------------
 def extract_experience_with_llm(resume_text):
     prompt = f"""
 You are an expert recruiter.
@@ -92,13 +92,12 @@ Resume Text:
         )
 
         content = resp.choices[0].message.content.strip()
-
-        # Fallback in case JSON isn't perfectly formatted
         json_str = re.search(r"\{.*\}", content, re.DOTALL)
+
         if json_str:
             data = json.loads(json_str.group())
             years = int(data.get("years_of_experience", 0))
-            return years if years >= 0 else 0
+            return max(years, 0)
         else:
             return 0
 
@@ -107,9 +106,9 @@ Resume Text:
         return 0
 
 
-# --------------------------
-# ✅ LLM-driven Intent Detection
-# --------------------------
+# ------------------------------------------
+# ✅ Intent Detection with Skills Extraction
+# ------------------------------------------
 def detect_intent(prompt):
     instruction = f"""
 You are an AI recruiter assistant.
@@ -119,12 +118,19 @@ Check whether the following user message is:
 2) general_chat — if the message is general conversation not related to searching resumes.
 
 If intent is resume_search, also extract:
-- min_years_experience: Minimum years of experience if mentioned (or 0 if not mentioned).
+- min_years_experience: Minimum years of experience if mentioned (default to 0 if not mentioned).
+- required_skills: A list of skills or technologies mentioned in the message.
 
 Return ONLY JSON like:
-{{"intent": "resume_search", "min_years_experience": 2}}
+{{
+  "intent": "resume_search",
+  "min_years_experience": 2,
+  "required_skills": ["flutter", "python", "sql"]
+}}
 OR
-{{"intent": "general_chat"}}
+{{
+  "intent": "general_chat"
+}}
 
 User Message:
 {prompt}
@@ -134,14 +140,16 @@ User Message:
             model="deepseek-ai/DeepSeek-V3",
             messages=[{"role": "user", "content": instruction}],
             temperature=0.2,
-            max_tokens=300
+            max_tokens=400
         )
 
         content = resp.choices[0].message.content.strip()
-
         json_str = re.search(r"\{.*\}", content, re.DOTALL)
+
         if json_str:
             data = json.loads(json_str.group())
+            data.setdefault("min_years_experience", 0)
+            data.setdefault("required_skills", [])
             return data
         else:
             return {"intent": "general_chat"}

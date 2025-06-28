@@ -85,7 +85,7 @@ with tab2:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Add CSS for styling chat bubbles
+    # Add CSS for chat bubble styling
     st.markdown(
         """
         <style>
@@ -114,25 +114,19 @@ with tab2:
 
     chat_container = st.container()
 
-    # Display chat history with styled bubbles
+    # Display chat history
     with chat_container:
         for msg in st.session_state.messages:
-            if msg["role"] == "user":
-                st.markdown(
-                    f'<div class="user-message"><div class="message-text">{msg["content"]}</div></div>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown(
-                    f'<div class="assistant-message"><div class="message-text">{msg["content"]}</div></div>',
-                    unsafe_allow_html=True,
-                )
+            role_class = "user-message" if msg["role"] == "user" else "assistant-message"
+            st.markdown(
+                f'<div class="{role_class}"><div class="message-text">{msg["content"]}</div></div>',
+                unsafe_allow_html=True,
+            )
 
     # Chat input
     prompt = st.chat_input("Ask me anything...")
 
     if prompt:
-        # Save user message
         st.session_state.messages.append({"role": "user", "content": prompt})
 
         with chat_container:
@@ -145,20 +139,24 @@ with tab2:
         intent_result = detect_intent(prompt)
         intent = intent_result.get("intent", "general_chat")
         min_exp = intent_result.get("min_years_experience", 0)
+        required_skills = intent_result.get("required_skills", [])
 
-        # Handle resume search
         if intent == "resume_search":
-            results = search_resumes(prompt, min_years_experience=min_exp)
-            if results:
-                response = "### 🔍 Top matching resumes:\n"
-                for res in results:
-                    response += (
-                        f"- [{res['file_name']}]({res['url']}) (Relevance: {res['score']})\n"
-                    )
-            else:
-                response = "⚠️ No matching resumes found."
+            if required_skills:
+                results = search_resumes_sql_first(required_skills, min_exp)
 
-        # Handle general chat
+                if results:
+                    response = "### 🔍 Top matching resumes:\n"
+                    for res in results:
+                        response += (
+                            f"- **[{res['file_name']}]({res['url']})** — "
+                            f"{res['match_count']} skill(s) matched, YOE: {res['years_of_experience']}\n"
+                        )
+                else:
+                    response = "⚠️ No matching resumes found."
+            else:
+                response = "❗ Please mention skills for better filtering."
+
         else:
             messages = [
                 {"role": m["role"], "content": m["content"]}
@@ -166,7 +164,6 @@ with tab2:
             ]
             response = chat_with_bot(messages)
 
-        # Save assistant response
         st.session_state.messages.append({"role": "assistant", "content": response})
 
         with chat_container:
