@@ -144,7 +144,7 @@ with tab2:
                 results = search_resumes_sql_first(required_skills, min_exp)
 
                 if results:
-                    response = "### 🔍 **Top Matching Resumes:**\n\n"
+                    response = "### 🔍 *Top Matching Resumes:* ###\n\n"
                     for res in results:
                         matched_skills_str = ", ".join(res['matched_skills'])
                         response += (
