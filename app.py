@@ -44,7 +44,10 @@ with tab1:
                 years_of_experience = extract_experience_with_llm(text)
 
                 insert_resume(
-                    uploaded_file.name, cloud_url, text + f"\n[Experience: {years_of_experience} years]"
+                    uploaded_file.name,
+                    cloud_url,
+                    text + f"\n[Experience: {years_of_experience} years]",
+                    years_of_experience
                 )
 
             st.success("Upload completed!")
