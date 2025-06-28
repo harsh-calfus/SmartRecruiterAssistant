@@ -3,7 +3,7 @@ from database import (
     create_table, get_all_resumes, insert_resume, delete_resume
 )
 from cloudinary_utils import upload_to_cloudinary, delete_from_cloudinary
-from chatbot_utils import general_chat, jd_based_resume_filter
+from chatbot_utils import chat_with_bot, search_resumes
 from io import BytesIO
 from PyPDF2 import PdfReader
 
@@ -63,34 +63,41 @@ with tab1:
         st.info("No resumes uploaded yet.")
 
 # ------------------------------------------
-# 🤖 Recruiter Chatbot
+# 🤖 Recruiter Chatbot (Like ChatGPT)
 # ------------------------------------------
 with tab2:
     st.subheader("🤖 Recruiter Chatbot")
 
-    mode = st.radio(
-        "Choose Mode",
-        ["General Chat", "Filter Resumes by Job Description"],
-        horizontal=True,
-    )
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-    user_input = st.text_area("Enter your query or job description:")
+    # Display chat history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-    if st.button("Submit") and user_input.strip():
-        if mode == "General Chat":
-            st.markdown("### 🤖 Response")
-            output = general_chat(user_input)
-            st.success(output)
+    # Fixed chat input
+    if prompt := st.chat_input("Ask me anything..."):
+        # Display user message
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-        else:
-            st.markdown("### 🎯 Matching Resumes")
-            results = jd_based_resume_filter(user_input)
-
+        # Check if prompt is about resumes
+        if any(word in prompt.lower() for word in ["resume", "candidate", "profile", "cv", "developer"]):
+            results = search_resumes(prompt)
             if results:
-                for item in results:
-                    st.markdown(
-                        f"✅ **[{item['file_name']}]({item['url']})**",
-                        unsafe_allow_html=True,
-                    )
+                response = "### 🔍 Top matching resumes:\n"
+                for res in results:
+                    response += f"- [{res['file_name']}]({res['url']}) (Relevance: {res['score']})\n"
             else:
-                st.info("No matching resumes found.")
+                response = "No matching resumes found."
+        else:
+            # General chat with bot
+            messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+            response = chat_with_bot(messages)
+
+        with st.chat_message("assistant"):
+            st.markdown(response)
+
+        st.session_state.messages.append({"role": "assistant", "content": response})
