@@ -3,7 +3,7 @@ from database import (
     create_table, get_all_resumes, insert_resume, delete_resume
 )
 from cloudinary_utils import upload_to_cloudinary, delete_from_cloudinary
-from chatbot_utils import chat_with_bot, search_resumes
+from chatbot_utils import chat_with_bot, search_resumes, detect_intent, extract_experience_with_llm
 from io import BytesIO
 from PyPDF2 import PdfReader
 
@@ -31,14 +31,21 @@ with tab1:
             for uploaded_file in uploaded_files:
                 file_bytes = uploaded_file.read()
 
-                cloud_url = upload_to_cloudinary(BytesIO(file_bytes), uploaded_file.name)
+                cloud_url = upload_to_cloudinary(
+                    BytesIO(file_bytes), uploaded_file.name
+                )
 
                 pdf_reader = PdfReader(BytesIO(file_bytes))
                 text = ""
                 for page in pdf_reader.pages:
                     text += page.extract_text() or ""
 
-                insert_resume(uploaded_file.name, cloud_url, text)
+                # Extract experience using LLM
+                years_of_experience = extract_experience_with_llm(text)
+
+                insert_resume(
+                    uploaded_file.name, cloud_url, text + f"\n[Experience: {years_of_experience} years]"
+                )
 
             st.success("Upload completed!")
 
@@ -62,6 +69,7 @@ with tab1:
     else:
         st.info("No resumes uploaded yet.")
 
+
 # ------------------------------------------
 # 🤖 Recruiter Chatbot (Like ChatGPT)
 # ------------------------------------------
@@ -83,18 +91,29 @@ with tab2:
             st.markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Check if prompt is about resumes
-        if any(word in prompt.lower() for word in ["resume", "candidate", "profile", "cv", "developer"]):
-            results = search_resumes(prompt)
+        # ---- Intent Detection ----
+        intent_result = detect_intent(prompt)
+        intent = intent_result.get("intent", "general_chat")
+        min_exp = intent_result.get("min_years_experience", 0)
+
+        # ---- Handle Resume Search ----
+        if intent == "resume_search":
+            results = search_resumes(prompt, min_years_experience=min_exp)
             if results:
                 response = "### 🔍 Top matching resumes:\n"
                 for res in results:
-                    response += f"- [{res['file_name']}]({res['url']}) (Relevance: {res['score']})\n"
+                    response += (
+                        f"- [{res['file_name']}]({res['url']}) (Relevance: {res['score']})\n"
+                    )
             else:
-                response = "No matching resumes found."
+                response = "⚠️ No matching resumes found."
+
+        # ---- Handle General Chat ----
         else:
-            # General chat with bot
-            messages = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+            messages = [
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages
+            ]
             response = chat_with_bot(messages)
 
         with st.chat_message("assistant"):

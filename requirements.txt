@@ -1,7 +1,9 @@
 streamlit
 together
 psycopg2-binary
-pdfplumber
 cloudinary
 PyPDF2
 sentence-transformers
+torch
+pdfplumber
+requests

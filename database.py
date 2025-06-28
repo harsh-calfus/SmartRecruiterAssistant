@@ -2,57 +2,61 @@ import psycopg2
 import streamlit as st
 
 
+# Connect to PostgreSQL
 conn = psycopg2.connect(st.secrets["DB_URL"])
 cur = conn.cursor()
 
 
+# Create Table
 def create_table():
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS resumes (
             file_name TEXT PRIMARY KEY,
             url TEXT,
-            content TEXT
+            content TEXT,
+            years_of_experience INT
         )
         """
     )
     conn.commit()
 
 
-def insert_resume(file_name, url, content):
+# Insert Resume with years_of_experience
+def insert_resume(file_name, url, content, years_of_experience):
     cur.execute(
         """
-        INSERT INTO resumes (file_name, url, content)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (file_name) DO NOTHING
+        INSERT INTO resumes (file_name, url, content, years_of_experience)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (file_name) DO UPDATE
+        SET url=EXCLUDED.url,
+            content=EXCLUDED.content,
+            years_of_experience=EXCLUDED.years_of_experience
         """,
-        (file_name, url, content),
+        (file_name, url, content, years_of_experience),
     )
     conn.commit()
 
 
+# Fetch All Resumes
 def get_all_resumes():
-    cur.execute("SELECT file_name, url FROM resumes")
+    cur.execute("SELECT file_name, url, content FROM resumes")
     return cur.fetchall()
 
 
+# Delete Resume
 def delete_resume(file_name):
     cur.execute("DELETE FROM resumes WHERE file_name = %s", (file_name,))
     conn.commit()
 
 
-def filter_resumes(skills, min_experience_years):
-    if not skills:
-        query = "SELECT file_name, url FROM resumes"
-    else:
-        conditions = " AND ".join(
-            [f"content ILIKE '%%{skill}%%'" for skill in skills]
-        )
-        query = f"""
-            SELECT file_name, url FROM resumes
-            WHERE {conditions}
+# (Optional) Filter by Minimum Experience if needed
+def filter_by_experience(min_experience_years):
+    cur.execute(
         """
-
-    cur.execute(query)
-    rows = cur.fetchall()
-    return [{"file_name": row[0], "url": row[1]} for row in rows]
+        SELECT file_name, url, content FROM resumes
+        WHERE years_of_experience >= %s
+        """,
+        (min_experience_years,),
+    )
+    return cur.fetchall()
