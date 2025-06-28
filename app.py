@@ -4,7 +4,7 @@ from database import (
 )
 from cloudinary_utils import upload_to_cloudinary, delete_from_cloudinary
 from chatbot_utils import (
-    chat_with_bot, search_resumes, detect_intent, extract_experience_with_llm
+    chat_with_bot, search_resumes_sql_first, detect_intent, extract_experience_with_llm
 )
 from io import BytesIO
 from PyPDF2 import PdfReader
@@ -146,7 +146,7 @@ with tab2:
                 results = search_resumes_sql_first(required_skills, min_exp)
 
                 if results:
-                    response = "### 🔍 Top matching resumes:\n"
+                    response = "### **🔍 Top matching resumes:**\n"
                     for res in results:
                         response += (
                             f"- **[{res['file_name']}]({res['url']})** — "
