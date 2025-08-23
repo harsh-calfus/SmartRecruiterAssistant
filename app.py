@@ -2,7 +2,7 @@ import streamlit as st
 from database import (
     create_table, get_all_resumes, insert_resume, delete_resume
 )
-from cloudinary_utils import upload_to_cloudinary, delete_from_cloudinary
+from s3_utils import upload_to_cloudinary, delete_from_cloudinary
 from chatbot_utils import (
     chat_with_bot, search_resumes_sql_first, detect_intent, extract_experience_with_llm
 )

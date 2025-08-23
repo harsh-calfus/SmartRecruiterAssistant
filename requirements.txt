@@ -7,3 +7,5 @@ sentence-transformers
 torch
 pdfplumber
 requests
+psycopg2
+boto3
