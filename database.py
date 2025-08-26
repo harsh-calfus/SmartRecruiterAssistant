@@ -7,7 +7,7 @@ conn = psycopg2.connect(st.secrets["DB_URL"])
 cur = conn.cursor()
 
 
-# ✅ Create Table
+# Create Table
 def create_table():
     try:
         cur.execute(

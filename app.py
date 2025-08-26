@@ -2,7 +2,7 @@ import streamlit as st
 from database import (
     create_table, get_all_resumes, insert_resume, delete_resume
 )
-from s3_utils import upload_to_cloudinary, delete_from_cloudinary
+from s3_utils import upload_to_s3, delete_from_s3
 from chatbot_utils import (
     chat_with_bot, search_resumes_sql_first, detect_intent, extract_experience_with_llm
 )
@@ -11,7 +11,7 @@ from PyPDF2 import PdfReader
 
 
 # Initialize DB
-# create_table()
+create_table()
 
 st.set_page_config(page_title="Smart Recruiter Assistant", layout="wide")
 st.title("🧠 Smart Recruiter Assistant")
@@ -33,7 +33,7 @@ with tab1:
             for uploaded_file in uploaded_files:
                 file_bytes = uploaded_file.read()
 
-                cloud_url = upload_to_cloudinary(
+                cloud_url = upload_to_s3(
                     BytesIO(file_bytes), uploaded_file.name
                 )
 
@@ -68,7 +68,7 @@ with tab1:
                 )
             with cols[1]:
                 if st.button("🗑️", key=f"delete_{file_name}"):
-                    delete_from_cloudinary(file_name)
+                    delete_from_s3(file_name)
                     delete_resume(file_name)
                     st.rerun()
     else:
